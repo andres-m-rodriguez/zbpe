@@ -63,17 +63,15 @@ pub const Encoder = struct {
         }
         return ids;
     }
-
-    pub fn decode(self: *const Encoder, allocator: std.mem.Allocator, ids: []const u32) !std.ArrayList(u8) {
-        var text = std.ArrayList(u8){};
-        for (ids, 0..) |id, i| {
-            if (self.id_to_token.get(id)) |token| {
-                if (i > 0) try text.append(allocator, ' ');
-                try text.appendSlice(allocator, token);
-            }
+pub fn decode(self: *const Encoder, allocator: std.mem.Allocator, ids: []const u32) ![]const u8 {
+    var text = std.ArrayList(u8){};
+    for (ids) |id| {
+        if (self.id_to_token.get(id)) |token| {
+            try text.appendSlice(allocator, token);
         }
-        return text;
     }
+    return text.toOwnedSlice(allocator);
+}
 
     pub fn getTokenId(self: *const Encoder, token: []const u8) ?u32 {
         return self.token_to_id.get(token);

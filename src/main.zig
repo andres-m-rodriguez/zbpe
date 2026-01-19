@@ -5,9 +5,11 @@ const Encoder = @import("Tokens/Encoder.zig").Encoder;
 const SpecialTokens = @import("Tokens/SpecialTokens.zig").SpecialTokens;
 
 pub fn main() !void {
-    const allocator = std.heap.page_allocator;
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
 
-    const text = "Hello world, name is andres!";
+    const text = "Hello world my, name is Andres!";
     var tokenizer = Tokenizer.init(text);
 
     var main_vocab = try Vocabulary.buildVocabulary(allocator, &tokenizer);
@@ -19,11 +21,13 @@ pub fn main() !void {
     const text2 = "Hello my name is Andres!";
     var ids = try encoder.encode(allocator, text2);
     defer ids.deinit(allocator);
+    for (ids.items) |id| {
+    std.debug.print("{d} ", .{id});
+}
+std.debug.print("\n", .{});
+    const decoded_word = try encoder.decode(allocator, ids.items);
+    defer allocator.free(decoded_word);
 
-    var decoded_words = try encoder.decode(allocator, ids.items);
-    defer decoded_words.denit(allocator);
-    
-    for(decoded_words.items) |word|{
-        std.debug.print("{s},", .{word});
-    }
+
+    std.debug.print("{s}", .{decoded_word});
 }
