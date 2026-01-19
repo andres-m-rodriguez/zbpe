@@ -30,9 +30,14 @@ pub const Tokenizer = struct {
             switch (self.state) {
                 .scanning => {
                     if (isWhiteSpace(byte)) {
+                        //Remove line if you don't want to keep whitespaces
+                        const token = self.text[self.pos .. self.pos + 1];
+
                         self.pos += 1;
+
                         self.consumed += 1;
-                        continue;
+                        //Replace for "continue" if you don't want to keep whitespaces
+                        return token;
                     }
                     if (isDelimiter(byte)) {
                         const token = self.text[self.pos .. self.pos + 1];
@@ -75,7 +80,6 @@ pub const Tokenizer = struct {
             }
         }
 
-        // End of input - flush remaining token
         if (self.state == .in_word or self.state == .in_run) {
             const token = self.text[self.start..self.pos];
             self.consumed += token.len;
