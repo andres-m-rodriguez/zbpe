@@ -1,9 +1,12 @@
 const std = @import("std");
 const Tokenizer = @import("Tokenizer.zig").Tokenizer;
+const SpecialTokens = @import("SpecialTokens.zig").SpecialTokens;
+
 pub const Encoder = struct {
     token_to_id: std.StringHashMapUnmanaged(u32),
     id_to_token: std.AutoHashMapUnmanaged(u32, []const u8),
-    unknown_id: ?u32,
+    unk_id: ?u32,
+    endoftext_id: ?u32,
 
     pub fn init(allocator: std.mem.Allocator, vocab: []const []const u8) !Encoder {
         var token_to_id = std.StringHashMapUnmanaged(u32){};
@@ -18,7 +21,8 @@ pub const Encoder = struct {
         return .{
             .token_to_id = token_to_id,
             .id_to_token = id_to_token,
-            .unknown_id = token_to_id.get("<UNK>"),
+            .unk_id = token_to_id.get(SpecialTokens.UNK),
+            .endoftext_id = token_to_id.get(SpecialTokens.ENDOFTEXT),
         };
     }
 
@@ -33,8 +37,28 @@ pub const Encoder = struct {
         while (tokenizer.next()) |token| {
             if (self.token_to_id.get(token)) |id| {
                 try ids.append(allocator, id);
-            } else if (self.unknown_id) |unk| {
+            } else if (self.unk_id) |unk| {
                 try ids.append(allocator, unk);
+            }
+        }
+        return ids;
+    }
+
+    pub fn encodeWithEndOfText(self: *const Encoder, allocator: std.mem.Allocator, texts: []const []const u8) !std.ArrayList(u32) {
+        var ids = std.ArrayList(u32){};
+        for (texts, 0..) |text, i| {
+            var tokenizer = Tokenizer.init(text);
+            while (tokenizer.next()) |token| {
+                if (self.token_to_id.get(token)) |id| {
+                    try ids.append(allocator, id);
+                } else if (self.unk_id) |unk| {
+                    try ids.append(allocator, unk);
+                }
+            }
+            if (i < texts.len - 1) {
+                if (self.endoftext_id) |eot| {
+                    try ids.append(allocator, eot);
+                }
             }
         }
         return ids;
@@ -49,5 +73,17 @@ pub const Encoder = struct {
             }
         }
         return text;
+    }
+
+    pub fn getTokenId(self: *const Encoder, token: []const u8) ?u32 {
+        return self.token_to_id.get(token);
+    }
+
+    pub fn getToken(self: *const Encoder, id: u32) ?[]const u8 {
+        return self.id_to_token.get(id);
+    }
+
+    pub fn vocabSize(self: *const Encoder) u32 {
+        return @intCast(self.token_to_id.count());
     }
 };
